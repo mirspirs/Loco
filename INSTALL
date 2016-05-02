@@ -1,0 +1,9 @@
+Building Loco
+
+See doc/readme-qt.rst for instructions on building Loco QT,
+the intended-for-end-users, nice-graphical-interface, reference
+implementation of Loco.
+
+See doc/build-*.txt for instructions on building locod,
+the intended-for-services, no-graphical-interface, reference
+implementation of Loco.
