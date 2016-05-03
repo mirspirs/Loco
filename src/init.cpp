@@ -82,15 +82,25 @@ bool fOnlyTor = false;
 // shutdown thing.
 //
 
-volatile bool fRequestShutdown = false;
-
-void StartShutdown()
+void ExitTimeout(void* parg)
 {
-    fRequestShutdown = true;
+#ifdef WIN32
+    MilliSleep(5000);
+    ExitProcess(0);
+#endif
 }
+
 bool ShutdownRequested()
 {
     return fRequestShutdown;
+}
+
+void StartShutdown()
+{
+#ifdef QT_GUI
+    // ensure we leave the Qt main loop for a clean GUI exit (Shutdown() is called in bitcoin.cpp afterwards)
+    uiInterface.QueueShutdown();
+#endif
 }
 
 void Shutdown()
@@ -192,7 +202,7 @@ std::string HelpMessage()
     strUsage += "  -proxy=<ip:port>       " + _("Connect through SOCKS5 proxy") + "\n";
     strUsage += "  -tor=<ip:port>         " + _("Use proxy to reach tor hidden services (default: same as -proxy)") + "\n";
     strUsage += "  -dns                   " + _("Allow DNS lookups for -addnode, -seednode and -connect") + "\n";
-    strUsage += "  -port=<port>           " + _("Listen for connections on <port> (default: 34575 or testnet: 44575)") + "\n";
+    strUsage += "  -port=<port>           " + _("Listen for connections on <port> (default: 35575 or testnet: 44575)") + "\n";
     strUsage += "  -maxconnections=<n>    " + _("Maintain at most <n> connections to peers (default: 125)") + "\n";
     strUsage += "  -addnode=<ip>          " + _("Add a node to connect to and attempt to keep the connection open") + "\n";
     strUsage += "  -connect=<ip>          " + _("Connect only to the specified node(s)") + "\n";
@@ -246,7 +256,7 @@ std::string HelpMessage()
                                                 "solved instantly. This is intended for regression testing tools and app development.") + "\n";
     strUsage += "  -rpcuser=<user>        " + _("Username for JSON-RPC connections") + "\n";
     strUsage += "  -rpcpassword=<pw>      " + _("Password for JSON-RPC connections") + "\n";
-    strUsage += "  -rpcport=<port>        " + _("Listen for JSON-RPC connections on <port> (default: 34574 or testnet: 44574)") + "\n";
+    strUsage += "  -rpcport=<port>        " + _("Listen for JSON-RPC connections on <port> (default: 35574 or testnet: 44574)") + "\n";
     strUsage += "  -rpcallowip=<ip>       " + _("Allow JSON-RPC connections from specified IP address") + "\n";
     if (!fHaveGUI)
     {

@@ -372,7 +372,7 @@ bool CTxDB::LoadBlockIndex()
         string strType;
         ssKey >> strType;
         // Did we reach the end of the data to read?
-        if (strType != "blockindex")
+        if (fRequestShutdown || strType != "blockindex")
             break;
         CDiskBlockIndex diskindex;
         ssValue >> diskindex;
@@ -417,7 +417,8 @@ bool CTxDB::LoadBlockIndex()
     }
     delete iterator;
 
-    boost::this_thread::interruption_point();
+    if (fRequestShutdown)
+        return true;
 
     // Calculate nChainTrust
     vector<pair<int, CBlockIndex*> > vSortedByHeight;
@@ -473,8 +474,7 @@ bool CTxDB::LoadBlockIndex()
     map<pair<unsigned int, unsigned int>, CBlockIndex*> mapBlockPos;
     for (CBlockIndex* pindex = pindexBest; pindex && pindex->pprev; pindex = pindex->pprev)
     {
-        boost::this_thread::interruption_point();
-        if (pindex->nHeight < nBestHeight-nCheckDepth)
+        if (fRequestShutdown || pindex->nHeight < nBestHeight-nCheckDepth)
             break;
         CBlock block;
         if (!block.ReadFromDisk(pindex))
@@ -577,11 +577,10 @@ bool CTxDB::LoadBlockIndex()
             }
         }
     }
-    if (pindexFork)
+    if (pindexFork && !fRequestShutdown)
     {
-        boost::this_thread::interruption_point();
         // Reorg back to the fork
-        LogPrintf("LoadBlockIndex() : *** moving best chain pointer back to block %d\n", pindexFork->nHeight);
+        printf("LoadBlockIndex() : *** moving best chain pointer back to block %d\n", pindexFork->nHeight);
         CBlock block;
         if (!block.ReadFromDisk(pindexFork))
             return error("LoadBlockIndex() : block.ReadFromDisk failed");
