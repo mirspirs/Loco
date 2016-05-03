@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = Loco-Qt
-VERSION = 1.3.0.0
+VERSION = 1.4.0.0
 INCLUDEPATH += share src src/json src/qt src/qt/plugins/mrichtexteditor
 QT +=core gui network printsupport script
 DEFINES += ENABLE_WALLET
