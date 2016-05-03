@@ -2770,8 +2770,8 @@ alertnotify=echo %%s | mail -s &quot;Loco Alert&quot; admin@foo.com
     </message>
     <message>
         <location line="+6"/>
-        <source>Listen for connections on &lt;port&gt; (default: 34575 or testnet: 44575)</source>
-        <translation>监听&lt;port&gt;端口的连接 (默认: 34575 测试网: 44575)</translation>
+        <source>Listen for connections on &lt;port&gt; (default: 35575 or testnet: 44575)</source>
+        <translation>监听&lt;port&gt;端口的连接 (默认: 35575 测试网: 44575)</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -2820,8 +2820,8 @@ alertnotify=echo %%s | mail -s &quot;Loco Alert&quot; admin@foo.com
     </message>
     <message>
         <location line="+65"/>
-        <source>Listen for JSON-RPC connections on &lt;port&gt; (default: 34574 or testnet: 44574)</source>
-        <translation>监听 &lt;port&gt; 端口的JSON-RPC连接 (默认: 34574 测试网: 44574)</translation>
+        <source>Listen for JSON-RPC connections on &lt;port&gt; (default: 35574 or testnet: 44574)</source>
+        <translation>监听 &lt;port&gt; 端口的JSON-RPC连接 (默认: 35574 测试网: 44574)</translation>
     </message>
     <message>
         <location line="-17"/>

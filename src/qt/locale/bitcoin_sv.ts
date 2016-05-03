@@ -2758,8 +2758,8 @@ for example: alertnotify=echo %%s | mail -s &quot;Loco Alert&quot; admin@foo.com
     </message>
     <message>
         <location line="+6"/>
-        <source>Listen for connections on &lt;port&gt; (default: 34575 or testnet: 44575)</source>
-        <translation>Lyssna efter anslutningar på &lt;port&gt; (standard: 34575 eller testnät: 44575)</translation>
+        <source>Listen for connections on &lt;port&gt; (default: 35575 or testnet: 44575)</source>
+        <translation>Lyssna efter anslutningar på &lt;port&gt; (standard: 35575 eller testnät: 44575)</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -2808,8 +2808,8 @@ for example: alertnotify=echo %%s | mail -s &quot;Loco Alert&quot; admin@foo.com
     </message>
     <message>
         <location line="+65"/>
-        <source>Listen for JSON-RPC connections on &lt;port&gt; (default: 34574 or testnet: 44574)</source>
-        <translation>Lyssna efter JSON-RPC anslutningar på &lt;port&gt; (standard: 34574 eller testnät: 44574)</translation>
+        <source>Listen for JSON-RPC connections on &lt;port&gt; (default: 35574 or testnet: 44574)</source>
+        <translation>Lyssna efter JSON-RPC anslutningar på &lt;port&gt; (standard: 35574 eller testnät: 44574)</translation>
     </message>
     <message>
         <location line="-17"/>

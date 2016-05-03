@@ -2772,8 +2772,8 @@ napríklad: alertnotify=echo %%s | mail -s &quot;Loco upozornenie&quot; admin@fo
     </message>
     <message>
         <location line="+6"/>
-        <source>Listen for connections on &lt;port&gt; (default: 34575 or testnet: 44575)</source>
-        <translation>Počúvať pripojenia na &lt;port&gt; (predvolené: 34575 alebo testovacia sieť: 44575)</translation>
+        <source>Listen for connections on &lt;port&gt; (default: 35575 or testnet: 44575)</source>
+        <translation>Počúvať pripojenia na &lt;port&gt; (predvolené: 35575 alebo testovacia sieť: 44575)</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -2822,8 +2822,8 @@ napríklad: alertnotify=echo %%s | mail -s &quot;Loco upozornenie&quot; admin@fo
     </message>
     <message>
         <location line="+65"/>
-        <source>Listen for JSON-RPC connections on &lt;port&gt; (default: 34574 or testnet: 44574)</source>
-        <translation>Počúvajte pre JSON-RPC spojenie na &lt;port&gt; (predvolené: 34574 alebo testovaciasieť: 44574)</translation>
+        <source>Listen for JSON-RPC connections on &lt;port&gt; (default: 35574 or testnet: 44574)</source>
+        <translation>Počúvajte pre JSON-RPC spojenie na &lt;port&gt; (predvolené: 35574 alebo testovaciasieť: 44574)</translation>
     </message>
     <message>
         <location line="-17"/>

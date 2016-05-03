@@ -53,8 +53,8 @@ public:
         pchMessageStart[2] = 0xa0;
         pchMessageStart[3] = 0xe4;
         vAlertPubKey = ParseHex("042f222989769417eb053cd9f16a9a2894ad5ebbd551be1a4bd2d10cdb679228c91e26e26900eb9fd13c016ed91528241bcf3bd55023679be17f0bd3a16e6fbeba");
-        nDefaultPort = 34575;
-        nRPCPort = 34574;
+        nDefaultPort = 35575;
+        nRPCPort = 35574;
         bnProofOfWorkLimit = CBigNum(~uint256(0) >> 16);
 		
         const char* pszTimestamp = "http://www.theguardian.com/us-news/live/2016/apr/13/us-election-campaign-live-sanders-clinton-trump-cruz-kasich";
