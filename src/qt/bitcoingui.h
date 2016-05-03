@@ -231,6 +231,7 @@ private slots:
 
     /** called by a timer to check if fRequestShutdown has been set **/
     void detectShutdown();
+
 };
 
 #endif // BITCOINGUI_H

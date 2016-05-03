@@ -1274,5 +1274,9 @@ void BitcoinGUI::updateStakingIcon()
 void BitcoinGUI::detectShutdown()
 {
     if (ShutdownRequested())
-        QMetaObject::invokeMethod(QCoreApplication::instance(), "quit", Qt::QueuedConnection);
+    {
+        if(rpcConsole)
+            rpcConsole->hide();
+        qApp->quit();
+    }
 }
