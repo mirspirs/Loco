@@ -83,8 +83,9 @@ Value getmininginfo(const Array& params, bool fHelp)
             "getmininginfo\n"
             "Returns an object containing mining-related information.");
 
-    uint64_t nMinWeight = 0, nMaxWeight = 0, nWeight = 0;
-    pwalletMain->GetStakeWeight(*pwalletMain, nMinWeight, nMaxWeight, nWeight);
+    uint64_t nWeight = 0;
+    if (pwalletMain)
+        nWeight = pwalletMain->GetStakeWeight();
 
     Object obj, diff, weight;
     obj.push_back(Pair("blocks",        (int)nBestHeight));
@@ -118,30 +119,35 @@ Value getstakinginfo(const Array& params, bool fHelp)
             "getstakinginfo\n"
             "Returns an object containing staking-related information.");
 
-    uint64_t nMinWeight = 0, nMaxWeight = 0, nWeight = 0;
-    pwalletMain->GetStakeWeight(*pwalletMain, nMinWeight, nMaxWeight, nWeight);
+    uint64_t nWeight = 0;
+    uint64_t nExpectedTime = 0;
+    
+    if (pwalletMain)
+        nWeight = pwalletMain->GetStakeWeight();
 
     uint64_t nNetworkWeight = GetPoSKernelPS();
     bool staking = nLastCoinStakeSearchInterval && nWeight;
-    int nExpectedTime = staking ? (TARGET_SPACING * nNetworkWeight / nWeight) : -1;
+
+    nExpectedTime = staking ? (TARGET_SPACING * nNetworkWeight / nWeight) : 0;
+    
 
     Object obj;
 
-    obj.push_back(Pair("Enabled", GetBoolArg("-staking", true)));
-    obj.push_back(Pair("Staking", staking));
-    obj.push_back(Pair("Errors", GetWarnings("statusbar")));
+    obj.push_back(Pair("enabled", GetBoolArg("-staking", true)));
+    obj.push_back(Pair("staking", staking));
+    obj.push_back(Pair("errors", GetWarnings("statusbar")));
 
-    obj.push_back(Pair("Current Block Size", (uint64_t)nLastBlockSize));
-    obj.push_back(Pair("Current Block Tx", (uint64_t)nLastBlockTx));
-    obj.push_back(Pair("Pooled Tx", (uint64_t)mempool.size()));
+    obj.push_back(Pair("currentblocksize", (uint64_t)nLastBlockSize));
+    obj.push_back(Pair("currentblocktx", (uint64_t)nLastBlockTx));
+    obj.push_back(Pair("pooledtx", (uint64_t)mempool.size()));
 
-    obj.push_back(Pair("Difficulty", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
-    obj.push_back(Pair("Search Interval", (int)nLastCoinStakeSearchInterval));
+    obj.push_back(Pair("difficulty", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
+    obj.push_back(Pair("search-interval", (int)nLastCoinStakeSearchInterval));
 
-    obj.push_back(Pair("Weight", (uint64_t)nWeight));
-    obj.push_back(Pair("Net Stake Weight", (uint64_t)nNetworkWeight));
+    obj.push_back(Pair("weight", (uint64_t)nWeight));
+    obj.push_back(Pair("netstakeweight", (uint64_t)nNetworkWeight));
 
-    obj.push_back(Pair("Expected Time", nExpectedTime));
+    obj.push_back(Pair("expectedtime", nExpectedTime));
 
     return obj;
 }

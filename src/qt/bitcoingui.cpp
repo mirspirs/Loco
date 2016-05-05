@@ -1201,7 +1201,7 @@ void BitcoinGUI::toggleHidden()
     showNormalIfMinimized(true);
 }
 
- void BitcoinGUI::updateWeight()
+void BitcoinGUI::updateWeight()
 {
     if (!pwalletMain)
         return;
@@ -1214,8 +1214,7 @@ void BitcoinGUI::toggleHidden()
     if (!lockWallet)
         return;
 
-    uint64_t nMinWeight = 0, nMaxWeight = 0;
-    pwalletMain->GetStakeWeight(*pwalletMain, nMinWeight, nMaxWeight, nWeight);
+    nWeight = pwalletMain->GetStakeWeight();
 }
 
 void BitcoinGUI::updateStakingIcon()
@@ -1274,9 +1273,5 @@ void BitcoinGUI::updateStakingIcon()
 void BitcoinGUI::detectShutdown()
 {
     if (ShutdownRequested())
-    {
-        if(rpcConsole)
-            rpcConsole->hide();
-        qApp->quit();
-    }
+        QMetaObject::invokeMethod(QCoreApplication::instance(), "quit", Qt::QueuedConnection);
 }

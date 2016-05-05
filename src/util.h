@@ -91,8 +91,6 @@ T* alignup(T* p)
     return u.ptr;
 }
 
-boost::filesystem::path GetMasternodeConfigFile();
-
 #ifdef WIN32
 #define MSG_NOSIGNAL        0
 #define MSG_DONTWAIT        0
@@ -139,6 +137,7 @@ extern bool fPrintToConsole;
 extern bool fPrintToDebugLog;
 extern bool fRequestShutdown;
 extern bool fShutdown;
+extern bool fDaemon;
 extern bool fDaemon;
 extern bool fServer;
 extern bool fCommandLine;
@@ -247,9 +246,7 @@ std::string FormatFullVersion();
 std::string FormatSubVersion(const std::string& name, int nClientVersion, const std::vector<std::string>& comments);
 void runCommand(std::string strCommand);
 
-#ifdef USE_NATIVE_I2P
-std::string FormatI2PNativeFullVersion();
-#endif
+
 
 
 /**

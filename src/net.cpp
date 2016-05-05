@@ -419,10 +419,6 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool darkSendMaste
         {
             LOCK(cs_vNodes);
             vNodes.push_back(pnode);
-#ifdef USE_NATIVE_I2P
-            if (addrConnect.IsNativeI2P())
-                ++nI2PNodeCount;
-#endif
         }
 
         pnode->nTimeConnected = GetTime();

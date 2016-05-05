@@ -1529,7 +1529,7 @@ void CWallet::AvailableCoinsForStaking(vector<COutput>& vCoins, unsigned int nSp
 
     {
         LOCK2(cs_main, cs_wallet);
-        int nStakeMinConfirmations = 0;
+        int nStakeMinConfirmations = 200;
         for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
             const CWalletTx* pcoin = &(*it).second;
@@ -3330,14 +3330,13 @@ bool CWallet::FindStealthTransactions(const CTransaction& tx, mapValue_t& mapNar
 
 
 
-// NovaCoin: get current stake weight
-bool CWallet::GetStakeWeight(const CKeyStore& keystore, uint64_t& nMinWeight, uint64_t& nMaxWeight, uint64_t& nWeight)
+uint64_t CWallet::GetStakeWeight() const
 {
     // Choose coins to use
     int64_t nBalance = GetBalance();
 
     if (nBalance <= nReserveBalance)
-        return false;
+        return 0;
 
     vector<const CWalletTx*> vwtxPrev;
 
@@ -3345,46 +3344,30 @@ bool CWallet::GetStakeWeight(const CKeyStore& keystore, uint64_t& nMinWeight, ui
     int64_t nValueIn = 0;
 
     if (!SelectCoinsForStaking(nBalance - nReserveBalance, GetTime(), setCoins, nValueIn))
-        return false;
+        return 0;
 
     if (setCoins.empty())
-        return false;
+        return 0;
 
-    nMinWeight = nMaxWeight = nWeight = 0;
+    uint64_t nWeight = 0;
 
+    int64_t nCurrentTime = GetTime();
     CTxDB txdb("r");
+
+    LOCK2(cs_main, cs_wallet);
+    int nStakeMinConfirmations = 200;
+
+    nStakeMinConfirmations = 200;
+
+
     BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
     {
         CTxIndex txindex;
-        {
-            LOCK2(cs_main, cs_wallet);
-            if (!txdb.ReadTxIndex(pcoin.first->GetHash(), txindex))
-                continue;
-        }
-
-        int64_t nTimeWeight = GetWeight((int64_t)pcoin.first->nTime, (int64_t)GetTime());
-        CBigNum bnCoinDayWeight = CBigNum(pcoin.first->vout[pcoin.second].nValue) * nTimeWeight / COIN / (24 * 60 * 60);
-
-        // Weight is greater than zero
-        if (nTimeWeight > 0)
-        {
-            nWeight += bnCoinDayWeight.getuint64();
-        }
-
-        // Weight is greater than zero, but the maximum value isn't reached yet
-        if (nTimeWeight > 0 && nTimeWeight < nStakeMaxAge)
-        {
-            nMinWeight += bnCoinDayWeight.getuint64();
-        }
-
-        // Maximum weight was reached
-        if (nTimeWeight == nStakeMaxAge)
-        {
-            nMaxWeight += bnCoinDayWeight.getuint64();
-        }
+        if (pcoin.first->GetDepthInMainChain() >= nStakeMinConfirmations)
+            nWeight += pcoin.first->vout[pcoin.second].nValue;
     }
 
-    return true;
+    return nWeight;
 }
 
 bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int64_t nSearchInterval, int64_t nFees, CTransaction& txNew, CKey& key)
