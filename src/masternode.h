@@ -215,8 +215,8 @@ private:
 public:
 
     CMasternodePayments() {
-        strMainPubKey = "0234502309a21e22b80a437eb83e9ec5a8e6ff45bec36b38e269b415864bd1f162";
-        strTestPubKey = "0234502309a21e22b80a437eb83e9ec5a8e6ff45bec36b38e269b415864bd1f162";
+        strMainPubKey = "043c111ee84dfc0dbf160d339415044259519eae2840ab0a870a5a1e8a85b816c64cb86d6aa4955134efe72c458246fb84cfd52213ffe86368f3f9a93ec22e3f4d";
+        strTestPubKey = "043c111ee84dfc0dbf160d339415044259519eae2840ab0a870a5a1e8a85b816c64cb86d6aa4955134efe72c458246fb84cfd52213ffe86368f3f9a93ec22e3f4d";
         enabled = false;
     }
 

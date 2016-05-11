@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = Loco-Qt
-VERSION = 1.4.1.1
+VERSION = 1.4.5
 INCLUDEPATH += share src src/json src/qt src/qt/plugins/mrichtexteditor
 QT +=core gui network printsupport script
 DEFINES += ENABLE_WALLET
@@ -40,8 +40,8 @@ win32 {
 	BOOST_LIB_PATH=C:/deps/boost_1_55_0/stage/lib
 	BDB_INCLUDE_PATH=C:/deps/db-4.8.30.NC/build_unix
 	BDB_LIB_PATH=C:/deps/db-4.8.30.NC/build_unix
-	OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1p/include
-	OPENSSL_LIB_PATH=C:/deps/openssl-1.0.1p
+        OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.2h/include
+        OPENSSL_LIB_PATH=C:/deps/openssl-1.0.2h
 	MINIUPNPC_INCLUDE_PATH=C:/deps/miniupnpc
 	MINIUPNPC_LIB_PATH=C:/deps/miniupnpc
 	QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
