@@ -1731,8 +1731,8 @@ Les montants inférieurs à  0.546 fois les frais minimum de relais apparaissent
         <location line="+86"/>
         <location line="+86"/>
         <location line="+32"/>
-        <source>0.00 LOC</source>
-        <translation>123.456 LOC {0.00 ?}</translation>
+        <source>0.00 LOC2</source>
+        <translation>123.456 LOC2 {0.00 ?}</translation>
     </message>
     <message>
         <location line="-191"/>
@@ -1801,8 +1801,8 @@ Les montants inférieurs à  0.546 fois les frais minimum de relais apparaissent
     </message>
     <message>
         <location line="+16"/>
-        <source>123.456 LOC</source>
-        <translation>123.456 LOC</translation>
+        <source>123.456 LOC2</source>
+        <translation>123.456 LOC2</translation>
     </message>
     <message>
         <location line="+31"/>

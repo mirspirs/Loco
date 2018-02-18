@@ -12,7 +12,7 @@
 #include "uint256.h"
 
 
-static const int nCheckpointSpan = 2500;
+static const int nCheckpointSpan = 9999;
 
 namespace Checkpoints
 {
@@ -46,9 +46,10 @@ namespace Checkpoints
         ( 47539, uint256("0x135a61e145ad907cf402d2a8401e5c7956e2df2bdb0cd199b121b28673e6172b"))
         ( 59879, uint256("0x53d9840e35f25f4bdcae49e066643a0e84fab335b2fccbaa86dd46499c523d0a"))
         ( 65800, uint256("0x8a6284d79dd550712393d0a58025e8b492b0ccdae2f30541bf93647272555f69"))
-
-
-    ;
+        ( 287642, uint256("0x534d72e5128bad5dd4be874e1d3705ac793d1b4eae6e37a26c8c0c5b17dae4c7"))
+        ( 472816, uint256("0xe41ddfe0ffc8a6a2bf1c75f30f2aaf292335c379ed2882ecdda5caf01ffa6a5f "))
+        ( 773945, uint256("0x42ff556d0d0ca6a468e84c64ef587d11a5f7d44a20ad1273058bb0313a4b9fd4 "))
+        ( 1214350, uint256("0xe03798f4a92e65aa1cdbef12b88d737c05ba3487176465494888c306d73f0266"));
 
     // TestNet has no checkpoints
     static MapCheckpoints mapCheckpointsTestnet;

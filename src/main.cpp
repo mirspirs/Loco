@@ -1159,6 +1159,30 @@ int64_t GetProofOfWorkReward(int nHeight, int64_t nFees)
     {
         nSubsidy = 0 * COIN; // 0 Coins Per Block (Anti Instamine)
     }
+    else if(pindexBest-> nHeight < 1214500) 
+    {
+        nSubsidy = 5 * COIN; // Standard Subsidy
+    }
+    else if(pindexBest-> nHeight < 1215000) 
+    {
+        nSubsidy = 50000 * COIN; // New Miner Reward to gain interest
+    }
+    else if(pindexBest-> nHeight < 1220000) 
+    {
+        nSubsidy = 5000 * COIN; // New Miner Reward to gain interest
+    }
+    else if(pindexBest-> nHeight < 1225000) 
+    {
+        nSubsidy = 500 * COIN; // New Miner Reward to gain interest
+    }
+    else if(pindexBest-> nHeight < 1230000) 
+    {
+        nSubsidy = 50 * COIN; // New Miner Reward to gain interest
+    }
+    else if(pindexBest-> nHeight > 1230000) 
+    {
+        nSubsidy = 5 * COIN; // standard reward again after block 1.23mil
+    }
 
     return nSubsidy + nFees;
 }

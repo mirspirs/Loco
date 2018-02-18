@@ -1464,7 +1464,7 @@ bool CDarkSendPool::DoAutomaticDenominating(bool fDryRun, bool ready)
         if(sessionTotalValue > nBalanceNeedsAnonymized) sessionTotalValue = nBalanceNeedsAnonymized;
 
         double fLocoSubmitted = (sessionTotalValue / CENT);
-        LogPrintf("Submitting Darksend for %f LOC CENT - sessionTotalValue %d\n", fLocoSubmitted, sessionTotalValue);
+        LogPrintf("Submitting Darksend for %f LOC2 CENT - sessionTotalValue %d\n", fLocoSubmitted, sessionTotalValue);
 
         if(pwalletMain->GetDenominatedBalance(true, true) > 0){ //get denominated unconfirmed inputs
             LogPrintf("DoAutomaticDenominating -- Found unconfirmed denominated outputs, will wait till they confirm to continue.\n");

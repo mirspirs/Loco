@@ -1,4 +1,4 @@
-// Copyright (c) 2015 The LOC developers
+// Copyright (c) 2015 The LOC2 developers
 // Copyright (c) 2009-2012 The Darkcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -26,7 +26,7 @@ using namespace boost;
 
 
 #define SPORK_1_MASTERNODE_PAYMENTS_ENFORCEMENT_DEFAULT       2428537599  //2015-4-8 23:59:59 GMT
-#define SPORK_2_MAX_VALUE_DEFAULT                             500        //500 LOC  
+#define SPORK_2_MAX_VALUE_DEFAULT                             500        //500 LOC2  
 #define SPORK_3_REPLAY_BLOCKS_DEFAULT                         0
 #define SPORK_4_RECONVERGE_DEFAULT                            1420070400  //2047-1-1
 
