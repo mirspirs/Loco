@@ -159,8 +159,8 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
         tx.vin.push_back(vin);
         tx.vout.push_back(vout);
         //if(AcceptableInputs(mempool, state, tx)){
-	bool* pfMissingInputs = false;
-	if(AcceptableInputs(mempool, tx, false, pfMissingInputs)){
+	bool fMissingInputs = false;
+	if(AcceptableInputs(mempool, tx, false, &fMissingInputs)){
             if(fDebug) LogPrintf("dsee - Accepted masternode entry %i %i\n", count, current);
 
             if(GetInputAge(vin) < MASTERNODE_MIN_CONFIRMATIONS){
@@ -603,8 +603,8 @@ void CMasterNode::Check()
         tx.vout.push_back(vout);
 
         //if(!AcceptableInputs(mempool, state, tx)){
-        bool* pfMissingInputs = false;
-	if(!AcceptableInputs(mempool, tx, false, pfMissingInputs)){
+        bool fMissingInputs = false;
+	if(!AcceptableInputs(mempool, tx, false, &fMissingInputs)){
             enabled = 3;
             return;
         }
