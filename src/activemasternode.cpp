@@ -1,401 +1,473 @@
-// Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2009-2012 The Darkcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <boost/assign/list_of.hpp> // for 'map_list_of()'
-#include <boost/foreach.hpp>
+#include "protocol.h"
+#include "activemasternode.h"
+#include <boost/lexical_cast.hpp>
+#include "clientversion.h"
 
-#include "checkpoints.h"
-
-#include "txdb.h"
-#include "main.h"
-#include "uint256.h"
-
-
-static const int nCheckpointSpan = 9999;
-
-namespace Checkpoints
+//
+// Bootup the masternode, look for a 500 LOC2 input and register on the network
+//
+void CActiveMasternode::ManageStatus()
 {
-    typedef std::map<int, uint256> MapCheckpoints;
+    std::string errorMessage;
 
-    //
-    // What makes a good checkpoint block?
-    // + Is surrounded by blocks with reasonable timestamps
-    //   (no blocks before with a timestamp after, none after with
-    //    timestamp before)
-    // + Contains no strange transactions
-    //
-    static MapCheckpoints mapCheckpoints =
-        boost::assign::map_list_of
-        ( 0, uint256("0xd4487c6a177d2c4562828fd650047f17878e19dd4dfb93635162ec4e2bf4b7f5"))
-        ( 1, uint256("0xe6057d915dbdef6a3dc0563da369da63aadf920568d36bd1da93817cd4ef3688"))
-        ( 2, uint256("0xf8e19eefb6654e9ee189689b5ee59fbff71abece243400a66a72514ef12607db"))
-        ( 3, uint256("0x6b9d5e52913cf0af6444977216ad2d502f4cb6256f2cc46e33c62157a9f4e65a"))
-        ( 527, uint256("0xa3a93b813757a08bb2f5c1ba59bbf074a702e7f34d8184c972ca8dcc92ec2cfc"))
-        ( 1492, uint256("0x094d8c91d43dd0ef32dc1f2b5b2d10bbacb2edbfe9ba153ce63c7e359fec0ae1"))
-        ( 4476, uint256("0xd18f5f3d1d799eb207abcf62a83337e2d68ec63bbbc139ef478473e44e2a30bb"))
-        ( 8765, uint256("0xc1da7d04404f2ccf5f2d0e879d60604579b383d0764ae030da753195e2ed65fa"))
-        ( 13491, uint256("0xac00e19fa376354ab545233ad6acfc819e33ef8f66a6aad1e20c0efa1fe4b883"))
-        ( 17868, uint256("0x33af61ad46c6b15fbfdf4861a901132781c9a5561e19dd0554b910ee01b8efd7"))
-        ( 20234, uint256("0xc526f989c1ba737ac18ccf94fc99108154a27166050b0be199a88358ff48882a"))
-        ( 22998, uint256("0x8b36be985e5e477f5dbe6abb8817ee0aac326f7688052f7f35322b3f13520052"))
-        ( 27495, uint256("0xbe66ba09dba083386195219196c6219d974a728dbee9d81af7fc6aa22fe12c87"))
-        ( 31772, uint256("0xc944648b733c3e1189f381e5c3fde9882619e4de279c4f48cb4e374a5773c61e"))
-        ( 35839, uint256("0x6ee3936e9c572f147599015b64292f9eb0fb3597d6fd64292e23a2ddea2a5aef"))
-        ( 38037, uint256("0xe03bcb5ff4ac930414e6ad9d521cae467ef391a45d391a15629e9d839f331b08"))
-        ( 47539, uint256("0x135a61e145ad907cf402d2a8401e5c7956e2df2bdb0cd199b121b28673e6172b"))
-        ( 59879, uint256("0x53d9840e35f25f4bdcae49e066643a0e84fab335b2fccbaa86dd46499c523d0a"))
-        ( 65800, uint256("0x8a6284d79dd550712393d0a58025e8b492b0ccdae2f30541bf93647272555f69"))
-        ( 287642, uint256("0x534d72e5128bad5dd4be874e1d3705ac793d1b4eae6e37a26c8c0c5b17dae4c7"))
-        ( 472816, uint256("0xe41ddfe0ffc8a6a2bf1c75f30f2aaf292335c379ed2882ecdda5caf01ffa6a5f "))
-        ( 773945, uint256("0x42ff556d0d0ca6a468e84c64ef587d11a5f7d44a20ad1273058bb0313a4b9fd4 "))
-        ( 1214350, uint256("0xe03798f4a92e65aa1cdbef12b88d737c05ba3487176465494888c306d73f0266"));
+    if (fDebug) LogPrintf("CActiveMasternode::ManageStatus() - Begin\n");
 
-    // TestNet has no checkpoints
-    static MapCheckpoints mapCheckpointsTestnet;
+    if(!fMasterNode) return;
 
-    bool CheckHardened(int nHeight, const uint256& hash)
-    {
-        MapCheckpoints& checkpoints = (TestNet() ? mapCheckpointsTestnet : mapCheckpoints);
-
-        MapCheckpoints::const_iterator i = checkpoints.find(nHeight);
-        if (i == checkpoints.end()) return true;
-        return hash == i->second;
+    //need correct adjusted time to send ping
+    bool fIsInitialDownload = IsInitialBlockDownload();
+    if(fIsInitialDownload) {
+        status = MASTERNODE_SYNC_IN_PROCESS;
+        LogPrintf("CActiveMasternode::ManageStatus() - Sync in progress. Must wait until sync is complete to start masternode.\n");
+        return;
     }
 
-    int GetTotalBlocksEstimate()
-    {
-        MapCheckpoints& checkpoints = (TestNet() ? mapCheckpointsTestnet : mapCheckpoints);
-
-        if (checkpoints.empty())
-            return 0;
-        return checkpoints.rbegin()->first;
+    if(status == MASTERNODE_INPUT_TOO_NEW || status == MASTERNODE_NOT_CAPABLE || status == MASTERNODE_SYNC_IN_PROCESS){
+        status = MASTERNODE_NOT_PROCESSED;
     }
 
-    CBlockIndex* GetLastCheckpoint(const std::map<uint256, CBlockIndex*>& mapBlockIndex)
-    {
-        MapCheckpoints& checkpoints = (TestNet() ? mapCheckpointsTestnet : mapCheckpoints);
-
-        BOOST_REVERSE_FOREACH(const MapCheckpoints::value_type& i, checkpoints)
-        {
-            const uint256& hash = i.second;
-            std::map<uint256, CBlockIndex*>::const_iterator t = mapBlockIndex.find(hash);
-            if (t != mapBlockIndex.end())
-                return t->second;
-        }
-        return NULL;
-    }
-
-    // ppcoin: synchronized checkpoint (centrally broadcasted)
-    uint256 hashSyncCheckpoint = 0;
-    uint256 hashPendingCheckpoint = 0;
-    CSyncCheckpoint checkpointMessage;
-    CSyncCheckpoint checkpointMessagePending;
-    uint256 hashInvalidCheckpoint = 0;
-    CCriticalSection cs_hashSyncCheckpoint;
-
-    // ppcoin: get last synchronized checkpoint
-    CBlockIndex* GetLastSyncCheckpoint()
-    {
-        LOCK(cs_hashSyncCheckpoint);
-        if (!mapBlockIndex.count(hashSyncCheckpoint))
-            error("GetSyncCheckpoint: block index missing for current sync-checkpoint %s", hashSyncCheckpoint.ToString());
-        else
-            return mapBlockIndex[hashSyncCheckpoint];
-        return NULL;
-    }
-
-    // ppcoin: only descendant of current sync-checkpoint is allowed
-    bool ValidateSyncCheckpoint(uint256 hashCheckpoint)
-    {
-        if (!mapBlockIndex.count(hashSyncCheckpoint))
-            return error("ValidateSyncCheckpoint: block index missing for current sync-checkpoint %s", hashSyncCheckpoint.ToString());
-        if (!mapBlockIndex.count(hashCheckpoint))
-            return error("ValidateSyncCheckpoint: block index missing for received sync-checkpoint %s", hashCheckpoint.ToString());
-
-        CBlockIndex* pindexSyncCheckpoint = mapBlockIndex[hashSyncCheckpoint];
-        CBlockIndex* pindexCheckpointRecv = mapBlockIndex[hashCheckpoint];
-
-        if (pindexCheckpointRecv->nHeight <= pindexSyncCheckpoint->nHeight)
-        {
-            // Received an older checkpoint, trace back from current checkpoint
-            // to the same height of the received checkpoint to verify
-            // that current checkpoint should be a descendant block
-            CBlockIndex* pindex = pindexSyncCheckpoint;
-            while (pindex->nHeight > pindexCheckpointRecv->nHeight)
-                if (!(pindex = pindex->pprev))
-                    return error("ValidateSyncCheckpoint: pprev null - block index structure failure");
-            if (pindex->GetBlockHash() != hashCheckpoint)
-            {
-                hashInvalidCheckpoint = hashCheckpoint;
-                return error("ValidateSyncCheckpoint: new sync-checkpoint %s is conflicting with current sync-checkpoint %s", hashCheckpoint.ToString(), hashSyncCheckpoint.ToString());
+    if(status == MASTERNODE_NOT_PROCESSED) {
+        if(strMasterNodeAddr.empty()) {
+            if(!GetLocal(service)) {
+                notCapableReason = "Can't detect external address. Please use the masternodeaddr configuration option.";
+                status = MASTERNODE_NOT_CAPABLE;
+                LogPrintf("CActiveMasternode::ManageStatus() - not capable: %s\n", notCapableReason.c_str());
+                return;
             }
-            return false; // ignore older checkpoint
+        } else {
+        	service = CService(strMasterNodeAddr);
         }
 
-        // Received checkpoint should be a descendant block of the current
-        // checkpoint. Trace back to the same height of current checkpoint
-        // to verify.
-        CBlockIndex* pindex = pindexCheckpointRecv;
-        while (pindex->nHeight > pindexSyncCheckpoint->nHeight)
-            if (!(pindex = pindex->pprev))
-                return error("ValidateSyncCheckpoint: pprev2 null - block index structure failure");
-        if (pindex->GetBlockHash() != hashSyncCheckpoint)
-        {
-            hashInvalidCheckpoint = hashCheckpoint;
-            return error("ValidateSyncCheckpoint: new sync-checkpoint %s is not a descendant of current sync-checkpoint %s", hashCheckpoint.ToString(), hashSyncCheckpoint.ToString());
+        LogPrintf("CActiveMasternode::ManageStatus() - Checking inbound connection to '%s'\n", service.ToString().c_str());
+
+                  
+            if(!ConnectNode((CAddress)service, service.ToString().c_str())){
+                notCapableReason = "Could not connect to " + service.ToString();
+                status = MASTERNODE_NOT_CAPABLE;
+                LogPrintf("CActiveMasternode::ManageStatus() - not capable: %s\n", notCapableReason.c_str());
+                return;
+            }
+        
+
+        if(pwalletMain->IsLocked()){
+            notCapableReason = "Wallet is locked.";
+            status = MASTERNODE_NOT_CAPABLE;
+            LogPrintf("CActiveMasternode::ManageStatus() - not capable: %s\n", notCapableReason.c_str());
+            return;
         }
-        return true;
-    }
 
-    bool WriteSyncCheckpoint(const uint256& hashCheckpoint)
-    {
-        CTxDB txdb;
-        txdb.TxnBegin();
-        if (!txdb.WriteSyncCheckpoint(hashCheckpoint))
-        {
-            txdb.TxnAbort();
-            return error("WriteSyncCheckpoint(): failed to write to db sync checkpoint %s", hashCheckpoint.ToString());
-        }
-        if (!txdb.TxnCommit())
-            return error("WriteSyncCheckpoint(): failed to commit to db sync checkpoint %s", hashCheckpoint.ToString());
+        // Set defaults
+        status = MASTERNODE_NOT_CAPABLE;
+        notCapableReason = "Unknown. Check debug.log for more information.\n";
 
-        Checkpoints::hashSyncCheckpoint = hashCheckpoint;
-        return true;
-    }
+        // Choose coins to use
+        CPubKey pubKeyCollateralAddress;
+        CKey keyCollateralAddress;
 
-    bool AcceptPendingSyncCheckpoint()
-    {
-        LOCK(cs_hashSyncCheckpoint);
-        if (hashPendingCheckpoint != 0 && mapBlockIndex.count(hashPendingCheckpoint))
-        {
-            if (!ValidateSyncCheckpoint(hashPendingCheckpoint))
-            {
-                hashPendingCheckpoint = 0;
-                checkpointMessagePending.SetNull();
-                return false;
+        if(GetMasterNodeVin(vin, pubKeyCollateralAddress, keyCollateralAddress)) {
+
+            if(GetInputAge(vin) < MASTERNODE_MIN_CONFIRMATIONS){
+                LogPrintf("CActiveMasternode::ManageStatus() - Input must have least %d confirmations - %d confirmations\n", MASTERNODE_MIN_CONFIRMATIONS, GetInputAge(vin));
+                status = MASTERNODE_INPUT_TOO_NEW;
+                return;
             }
 
-            CTxDB txdb;
-            CBlockIndex* pindexCheckpoint = mapBlockIndex[hashPendingCheckpoint];
-            if (!pindexCheckpoint->IsInMainChain())
+            LogPrintf("CActiveMasternode::ManageStatus() - Is capable master node!\n");
+
+            status = MASTERNODE_IS_CAPABLE;
+            notCapableReason = "";
+
+            pwalletMain->LockCoin(vin.prevout);
+
+            // send to all nodes
+            CPubKey pubKeyMasternode;
+            CKey keyMasternode;
+
+            if(!darkSendSigner.SetKey(strMasterNodePrivKey, errorMessage, keyMasternode, pubKeyMasternode))
             {
-                CBlock block;
-                if (!block.ReadFromDisk(pindexCheckpoint))
-                    return error("AcceptPendingSyncCheckpoint: ReadFromDisk failed for sync checkpoint %s", hashPendingCheckpoint.ToString());
-                if (!block.SetBestChain(txdb, pindexCheckpoint))
-                {
-                    hashInvalidCheckpoint = hashPendingCheckpoint;
-                    return error("AcceptPendingSyncCheckpoint: SetBestChain failed for sync checkpoint %s", hashPendingCheckpoint.ToString());
-                }
+            	LogPrintf("Register::ManageStatus() - Error upon calling SetKey: %s\n", errorMessage.c_str());
+            	return;
             }
 
-            if (!WriteSyncCheckpoint(hashPendingCheckpoint))
-                return error("AcceptPendingSyncCheckpoint(): failed to write sync checkpoint %s", hashPendingCheckpoint.ToString());
-            hashPendingCheckpoint = 0;
-            checkpointMessage = checkpointMessagePending;
-            checkpointMessagePending.SetNull();
-            LogPrintf("AcceptPendingSyncCheckpoint : sync-checkpoint at %s\n", hashSyncCheckpoint.ToString());
-            // relay the checkpoint
-            if (!checkpointMessage.IsNull())
-            {
-                BOOST_FOREACH(CNode* pnode, vNodes)
-                    checkpointMessage.RelayTo(pnode);
+            if(!Register(vin, service, keyCollateralAddress, pubKeyCollateralAddress, keyMasternode, pubKeyMasternode, errorMessage)) {
+            	LogPrintf("CActiveMasternode::ManageStatus() - Error on Register: %s\n", errorMessage.c_str());
             }
-            return true;
+
+            return;
+        } else {
+        	LogPrintf("CActiveMasternode::ManageStatus() - Could not find suitable coins!\n");
         }
-        return false;
     }
 
-    // Automatically select a suitable sync-checkpoint 
-    const CBlockIndex* AutoSelectSyncCheckpoint()
-    {
-        const CBlockIndex *pindex = pindexBest;
-        // Search backward for a block within max span and maturity window
-        while (pindex->pprev && pindex->nHeight + nCheckpointSpan > pindexBest->nHeight)
-            pindex = pindex->pprev;
-        return pindex;
-    }
-
-    // Check against synchronized checkpoint
-    bool CheckSync(int nHeight)
-    {
-        const CBlockIndex* pindexSync = AutoSelectSyncCheckpoint();
-        if (nHeight <= pindexSync->nHeight){
-            return false;
-        }
-        return true;
-    }
-
-    // ppcoin: reset synchronized checkpoint to last hardened checkpoint
-    bool ResetSyncCheckpoint()
-    {
-        LOCK(cs_hashSyncCheckpoint);
-        const uint256& hash = mapCheckpoints.rbegin()->second;
-        if (mapBlockIndex.count(hash) && !mapBlockIndex[hash]->IsInMainChain())
-        {
-            // checkpoint block accepted but not yet in main chain
-            LogPrintf("ResetSyncCheckpoint: SetBestChain to hardened checkpoint %s\n", hash.ToString());
-            CTxDB txdb;
-            CBlock block;
-            if (!block.ReadFromDisk(mapBlockIndex[hash]))
-                return error("ResetSyncCheckpoint: ReadFromDisk failed for hardened checkpoint %s", hash.ToString());
-            if (!block.SetBestChain(txdb, mapBlockIndex[hash]))
-            {
-                return error("ResetSyncCheckpoint: SetBestChain failed for hardened checkpoint %s", hash.ToString());
-            }
-        }
-        else if(!mapBlockIndex.count(hash))
-        {
-            // checkpoint block not yet accepted
-            hashPendingCheckpoint = hash;
-            checkpointMessagePending.SetNull();
-            LogPrintf("ResetSyncCheckpoint: pending for sync-checkpoint %s\n", hashPendingCheckpoint.ToString());
-        }
-
-        BOOST_REVERSE_FOREACH(const MapCheckpoints::value_type& i, mapCheckpoints)
-        {
-            const uint256& hash = i.second;
-            if (mapBlockIndex.count(hash) && mapBlockIndex[hash]->IsInMainChain())
-            {
-                if (!WriteSyncCheckpoint(hash))
-                    return error("ResetSyncCheckpoint: failed to write sync checkpoint %s", hash.ToString());
-                LogPrintf("ResetSyncCheckpoint: sync-checkpoint reset to %s\n", hashSyncCheckpoint.ToString());
-                return true;
-            }
-        }
-
-        if (!WriteSyncCheckpoint(Params().HashGenesisBlock()))
-            return error("ResetSyncCheckpoint: failed to write sync checkpoint genesis block");
-        LogPrintf("ResetSyncCheckpoint: sync-checkpoint reset to genesis block\n");
-        return true;
-    }
-
-    bool SetCheckpointPrivKey(std::string strPrivKey)
-    {
-        // Test signing a sync-checkpoint with genesis block
-        CSyncCheckpoint checkpoint;
-        checkpoint.hashCheckpoint = Params().HashGenesisBlock();
-        CDataStream sMsg(SER_NETWORK, PROTOCOL_VERSION);
-        sMsg << (CUnsignedSyncCheckpoint)checkpoint;
-        checkpoint.vchMsg = std::vector<unsigned char>(sMsg.begin(), sMsg.end());
-
-        std::vector<unsigned char> vchPrivKey = ParseHex(strPrivKey);
-        CKey key;
-        key.SetPrivKey(CPrivKey(vchPrivKey.begin(), vchPrivKey.end()), false); // if key is not correct openssl may crash
-        if (!key.Sign(Hash(checkpoint.vchMsg.begin(), checkpoint.vchMsg.end()), checkpoint.vchSig))
-            return false;
-
-        // Test signing successful, proceed
-        CSyncCheckpoint::strMasterPrivKey = strPrivKey;
-        return true;
-    }
-
-    bool SendSyncCheckpoint(uint256 hashCheckpoint)
-    {
-        CSyncCheckpoint checkpoint;
-        checkpoint.hashCheckpoint = hashCheckpoint;
-        CDataStream sMsg(SER_NETWORK, PROTOCOL_VERSION);
-        sMsg << (CUnsignedSyncCheckpoint)checkpoint;
-        checkpoint.vchMsg = std::vector<unsigned char>(sMsg.begin(), sMsg.end());
-
-        if (CSyncCheckpoint::strMasterPrivKey.empty())
-            return error("SendSyncCheckpoint: Checkpoint master key unavailable.");
-        std::vector<unsigned char> vchPrivKey = ParseHex(CSyncCheckpoint::strMasterPrivKey);
-        CKey key;
-        key.SetPrivKey(CPrivKey(vchPrivKey.begin(), vchPrivKey.end()), false); // if key is not correct openssl may crash
-        if (!key.Sign(Hash(checkpoint.vchMsg.begin(), checkpoint.vchMsg.end()), checkpoint.vchSig))
-            return error("SendSyncCheckpoint: Unable to sign checkpoint, check private key?");
-
-        if(!checkpoint.ProcessSyncCheckpoint(NULL))
-        {
-            LogPrintf("WARNING: SendSyncCheckpoint: Failed to process checkpoint.\n");
-            return false;
-        }
-
-        // Relay checkpoint
-        {
-            LOCK(cs_vNodes);
-            BOOST_FOREACH(CNode* pnode, vNodes)
-                checkpoint.RelayTo(pnode);
-        }
-        return true;
+    //send to all peers
+    if(!Dseep(errorMessage)) {
+    	LogPrintf("CActiveMasternode::ManageStatus() - Error on Ping: %s", errorMessage.c_str());
     }
 }
 
-// ppcoin: sync-checkpoint master key
-const std::string CSyncCheckpoint::strMasterPubKey = "043dac752b35b81ffd35fc30420ad2bfa8312b0b8cd29913df33863ae218c88ed4dd26151026b5043c225b4d50b4bc023aae9c4366f70616b5581cc716749868ab";
+// Send stop dseep to network for remote masternode
+bool CActiveMasternode::StopMasterNode(std::string strService, std::string strKeyMasternode, std::string& errorMessage) {
+	CTxIn vin;
+    CKey keyMasternode;
+    CPubKey pubKeyMasternode;
 
-std::string CSyncCheckpoint::strMasterPrivKey = "";
+    if(!darkSendSigner.SetKey(strKeyMasternode, errorMessage, keyMasternode, pubKeyMasternode)) {
+    	LogPrintf("CActiveMasternode::StopMasterNode() - Error: %s\n", errorMessage.c_str());
+		return false;
+	}
 
-bool CSyncCheckpoint::RelayTo(CNode* pnode) const
-{
-    // don't relay to nodes which haven't sent their version message
-    if (pnode->nVersion == 0)
-        return false;
-    // returns true if wasn't already sent
-    if (pnode->hashCheckpointKnown != hashCheckpoint)
-    {
-        pnode->hashCheckpointKnown = hashCheckpoint;
-        pnode->PushMessage("checkpoint", *this);
-        return true;
-    }
-    return false;
+	return StopMasterNode(vin, CService(strService), keyMasternode, pubKeyMasternode, errorMessage);
 }
 
-// ppcoin: verify signature of sync-checkpoint message
-bool CSyncCheckpoint::CheckSignature()
-{
-    CPubKey key(ParseHex(CSyncCheckpoint::strMasterPubKey));
-    if (!key.Verify(Hash(vchMsg.begin(), vchMsg.end()), vchSig))
-        return error("CSyncCheckpoint::CheckSignature() : verify signature failed");
+// Send stop dseep to network for main masternode
+bool CActiveMasternode::StopMasterNode(std::string& errorMessage) {
+	if(status != MASTERNODE_IS_CAPABLE && status != MASTERNODE_REMOTELY_ENABLED) {
+		errorMessage = "masternode is not in a running status";
+    	LogPrintf("CActiveMasternode::StopMasterNode() - Error: %s\n", errorMessage.c_str());
+		return false;
+	}
 
-    // Now unserialize the data
-    CDataStream sMsg(vchMsg, SER_NETWORK, PROTOCOL_VERSION);
-    sMsg >> *(CUnsignedSyncCheckpoint*)this;
+	status = MASTERNODE_STOPPED;
+
+    CPubKey pubKeyMasternode;
+    CKey keyMasternode;
+
+    if(!darkSendSigner.SetKey(strMasterNodePrivKey, errorMessage, keyMasternode, pubKeyMasternode))
+    {
+    	LogPrintf("Register::ManageStatus() - Error upon calling SetKey: %s\n", errorMessage.c_str());
+    	return false;
+    }
+
+	return StopMasterNode(vin, service, keyMasternode, pubKeyMasternode, errorMessage);
+}
+
+// Send stop dseep to network for any masternode
+bool CActiveMasternode::StopMasterNode(CTxIn vin, CService service, CKey keyMasternode, CPubKey pubKeyMasternode, std::string& errorMessage) {
+   	pwalletMain->UnlockCoin(vin.prevout);
+	return Dseep(vin, service, keyMasternode, pubKeyMasternode, errorMessage, true);
+}
+
+bool CActiveMasternode::Dseep(std::string& errorMessage) {
+	if(status != MASTERNODE_IS_CAPABLE && status != MASTERNODE_REMOTELY_ENABLED) {
+		errorMessage = "masternode is not in a running status";
+    	LogPrintf("CActiveMasternode::Dseep() - Error: %s\n", errorMessage.c_str());
+		return false;
+	}
+
+    CPubKey pubKeyMasternode;
+    CKey keyMasternode;
+
+    if(!darkSendSigner.SetKey(strMasterNodePrivKey, errorMessage, keyMasternode, pubKeyMasternode))
+    {
+    	LogPrintf("Register::ManageStatus() - Error upon calling SetKey: %s\n", errorMessage.c_str());
+    	return false;
+    }
+
+	return Dseep(vin, service, keyMasternode, pubKeyMasternode, errorMessage, false);
+}
+
+bool CActiveMasternode::Dseep(CTxIn vin, CService service, CKey keyMasternode, CPubKey pubKeyMasternode, std::string &retErrorMessage, bool stop) {
+    std::string errorMessage;
+    std::vector<unsigned char> vchMasterNodeSignature;
+    std::string strMasterNodeSignMessage;
+    int64_t masterNodeSignatureTime = GetAdjustedTime();
+
+    std::string strMessage = service.ToString() + boost::lexical_cast<std::string>(masterNodeSignatureTime) + boost::lexical_cast<std::string>(stop);
+
+    if(!darkSendSigner.SignMessage(strMessage, errorMessage, vchMasterNodeSignature, keyMasternode)) {
+    	retErrorMessage = "sign message failed: " + errorMessage;
+    	LogPrintf("CActiveMasternode::Dseep() - Error: %s\n", retErrorMessage.c_str());
+        return false;
+    }
+
+    if(!darkSendSigner.VerifyMessage(pubKeyMasternode, vchMasterNodeSignature, strMessage, errorMessage)) {
+    	retErrorMessage = "Verify message failed: " + errorMessage;
+    	LogPrintf("CActiveMasternode::Dseep() - Error: %s\n", retErrorMessage.c_str());
+        return false;
+    }
+
+    // Update Last Seen timestamp in masternode list
+    bool found = false;
+    BOOST_FOREACH(CMasterNode& mn, vecMasternodes) {
+        //LogPrintf(" -- %s\n", mn.vin.ToString().c_str());
+        if(mn.vin == vin) {
+            found = true;
+            mn.UpdateLastSeen();
+        }
+    }
+
+    if(!found){
+    	// Seems like we are trying to send a ping while the masternode is not registered in the network
+    	retErrorMessage = "Darksend Masternode List doesn't include our masternode, Shutting down masternode pinging service! " + vin.ToString();
+    	LogPrintf("CActiveMasternode::Dseep() - Error: %s\n", retErrorMessage.c_str());
+        status = MASTERNODE_NOT_CAPABLE;
+        notCapableReason = retErrorMessage;
+        return false;
+    }
+
+    //send to all peers
+    LogPrintf("CActiveMasternode::Dseep() - SendDarkSendElectionEntryPing vin = %s\n", vin.ToString().c_str());
+    SendDarkSendElectionEntryPing(vin, vchMasterNodeSignature, masterNodeSignatureTime, stop);
+
     return true;
 }
 
-// ppcoin: process synchronized checkpoint
-bool CSyncCheckpoint::ProcessSyncCheckpoint(CNode* pfrom)
-{
-    
-    if (!CheckSignature())
-        return false;
+bool CActiveMasternode::RegisterByPubKey(std::string strService, std::string strKeyMasternode, std::string collateralAddress, std::string& errorMessage) {
+	CTxIn vin;
+    CPubKey pubKeyCollateralAddress;
+    CKey keyCollateralAddress;
+    CPubKey pubKeyMasternode;
+    CKey keyMasternode;
 
-    LOCK(Checkpoints::cs_hashSyncCheckpoint);
-    if (!mapBlockIndex.count(hashCheckpoint))
+    if(!darkSendSigner.SetKey(strKeyMasternode, errorMessage, keyMasternode, pubKeyMasternode))
     {
-        // We haven't received the checkpoint chain, keep the checkpoint as pending
-        Checkpoints::hashPendingCheckpoint = hashCheckpoint;
-        Checkpoints::checkpointMessagePending = *this;
-        LogPrintf("ProcessSyncCheckpoint: pending for sync-checkpoint %s\n", hashCheckpoint.ToString());
+    	LogPrintf("CActiveMasternode::RegisterByPubKey() - Error upon calling SetKey: %s\n", errorMessage.c_str());
+    	return false;
+    }
+
+    if(!GetMasterNodeVinForPubKey(collateralAddress, vin, pubKeyCollateralAddress, keyCollateralAddress)) {
+		errorMessage = "could not allocate vin for collateralAddress";
+    	LogPrintf("Register::Register() - Error: %s\n", errorMessage.c_str());
+		return false;
+	}
+	return Register(vin, CService(strService), keyCollateralAddress, pubKeyCollateralAddress, keyMasternode, pubKeyMasternode, errorMessage);
+}
+
+bool CActiveMasternode::Register(std::string strService, std::string strKeyMasternode, std::string txHash, std::string strOutputIndex, std::string& errorMessage) {
+	CTxIn vin;
+    CPubKey pubKeyCollateralAddress;
+    CKey keyCollateralAddress;
+    CPubKey pubKeyMasternode;
+    CKey keyMasternode;
+
+    if(!darkSendSigner.SetKey(strKeyMasternode, errorMessage, keyMasternode, pubKeyMasternode))
+    {
+    	LogPrintf("CActiveMasternode::Register() - Error upon calling SetKey: %s\n", errorMessage.c_str());
+    	return false;
+    }
+
+    if(!GetMasterNodeVin(vin, pubKeyCollateralAddress, keyCollateralAddress, txHash, strOutputIndex)) {
+		errorMessage = "could not allocate vin";
+    	LogPrintf("Register::Register() - Error: %s\n", errorMessage.c_str());
+		return false;
+	}
+	return Register(vin, CService(strService), keyCollateralAddress, pubKeyCollateralAddress, keyMasternode, pubKeyMasternode, errorMessage);
+}
+
+bool CActiveMasternode::Register(CTxIn vin, CService service, CKey keyCollateralAddress, CPubKey pubKeyCollateralAddress, CKey keyMasternode, CPubKey pubKeyMasternode, std::string &retErrorMessage) {
+    std::string errorMessage;
+    std::vector<unsigned char> vchMasterNodeSignature;
+    std::string strMasterNodeSignMessage;
+    int64_t masterNodeSignatureTime = GetAdjustedTime();
+
+    std::string vchPubKey(pubKeyCollateralAddress.begin(), pubKeyCollateralAddress.end());
+    std::string vchPubKey2(pubKeyMasternode.begin(), pubKeyMasternode.end());
+
+    std::string strMessage = service.ToString() + boost::lexical_cast<std::string>(masterNodeSignatureTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(PROTOCOL_VERSION);
+
+    if(!darkSendSigner.SignMessage(strMessage, errorMessage, vchMasterNodeSignature, keyCollateralAddress)) {
+		retErrorMessage = "sign message failed: " + errorMessage;
+		LogPrintf("CActiveMasternode::Register() - Error: %s\n", retErrorMessage.c_str());
+		return false;
+    }
+
+    if(!darkSendSigner.VerifyMessage(pubKeyCollateralAddress, vchMasterNodeSignature, strMessage, errorMessage)) {
+		retErrorMessage = "Verify message failed: " + errorMessage;
+		LogPrintf("CActiveMasternode::Register() - Error: %s\n", retErrorMessage.c_str());
+		return false;
+	}
+
+    bool found = false;
+    LOCK(cs_masternodes);
+    BOOST_FOREACH(CMasterNode& mn, vecMasternodes)
+        if(mn.vin == vin)
+            found = true;
+
+    if(!found) {
+        LogPrintf("CActiveMasternode::Register() - Adding to masternode list service: %s - vin: %s\n", service.ToString().c_str(), vin.ToString().c_str());
+        CMasterNode mn(service, vin, pubKeyCollateralAddress, vchMasterNodeSignature, masterNodeSignatureTime, pubKeyMasternode, PROTOCOL_VERSION);
+        mn.UpdateLastSeen(masterNodeSignatureTime);
+        vecMasternodes.push_back(mn);
+    }
+
+    //send to all peers
+    LogPrintf("CActiveMasternode::Register() - SendDarkSendElectionEntry vin = %s\n", vin.ToString().c_str());
+    SendDarkSendElectionEntry(vin, service, vchMasterNodeSignature, masterNodeSignatureTime, pubKeyCollateralAddress, pubKeyMasternode, -1, -1, masterNodeSignatureTime, PROTOCOL_VERSION);
+
+    return true;
+}
+
+bool CActiveMasternode::GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secretKey) {
+	return GetMasterNodeVin(vin, pubkey, secretKey, "", "");
+}
+
+bool CActiveMasternode::GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secretKey, std::string strTxHash, std::string strOutputIndex) {
+    CScript pubScript;
+
+    // Find possible candidates
+    vector<COutput> possibleCoins = SelectCoinsMasternode();
+    COutput *selectedOutput;
+
+    // Find the vin
+	if(!strTxHash.empty()) {
+		// Let's find it
+		uint256 txHash(strTxHash);
+        int outputIndex = boost::lexical_cast<int>(strOutputIndex);
+		bool found = false;
+		BOOST_FOREACH(COutput& out, possibleCoins) {
+			if(out.tx->GetHash() == txHash && out.i == outputIndex)
+			{
+				selectedOutput = &out;
+				found = true;
+				break;
+			}
+		}
+		if(!found) {
+			LogPrintf("CActiveMasternode::GetMasterNodeVin - Could not locate valid vin\n");
+			return false;
+		}
+	} else {
+		// No output specified,  Select the first one
+		if(possibleCoins.size() > 0) {
+			selectedOutput = &possibleCoins[0];
+		} else {
+			LogPrintf("CActiveMasternode::GetMasterNodeVin - Could not locate specified vin from possible list\n");
+			return false;
+		}
+    }
+
+	// At this point we have a selected output, retrieve the associated info
+	return GetVinFromOutput(*selectedOutput, vin, pubkey, secretKey);
+}
+
+bool CActiveMasternode::GetMasterNodeVinForPubKey(std::string collateralAddress, CTxIn& vin, CPubKey& pubkey, CKey& secretKey) {
+	return GetMasterNodeVinForPubKey(collateralAddress, vin, pubkey, secretKey, "", "");
+}
+
+bool CActiveMasternode::GetMasterNodeVinForPubKey(std::string collateralAddress, CTxIn& vin, CPubKey& pubkey, CKey& secretKey, std::string strTxHash, std::string strOutputIndex) {
+    CScript pubScript;
+
+    // Find possible candidates
+    vector<COutput> possibleCoins = SelectCoinsMasternodeForPubKey(collateralAddress);
+    COutput *selectedOutput;
+
+    // Find the vin
+	if(!strTxHash.empty()) {
+		// Let's find it
+		uint256 txHash(strTxHash);
+        int outputIndex = boost::lexical_cast<int>(strOutputIndex);
+		bool found = false;
+		BOOST_FOREACH(COutput& out, possibleCoins) {
+			if(out.tx->GetHash() == txHash && out.i == outputIndex)
+			{
+				selectedOutput = &out;
+				found = true;
+				break;
+			}
+		}
+		if(!found) {
+			LogPrintf("CActiveMasternode::GetMasterNodeVinForPubKey - Could not locate valid vin\n");
+			return false;
+		}
+	} else {
+		// No output specified,  Select the first one
+		if(possibleCoins.size() > 0) {
+			selectedOutput = &possibleCoins[0];
+		} else {
+			LogPrintf("CActiveMasternode::GetMasterNodeVinForPubKey - Could not locate specified vin from possible list\n");
+			return false;
+		}
+    }
+
+	// At this point we have a selected output, retrieve the associated info
+	return GetVinFromOutput(*selectedOutput, vin, pubkey, secretKey);
+}
+
+
+// Extract masternode vin information from output
+bool CActiveMasternode::GetVinFromOutput(COutput out, CTxIn& vin, CPubKey& pubkey, CKey& secretKey) {
+
+    CScript pubScript;
+
+	vin = CTxIn(out.tx->GetHash(),out.i);
+    pubScript = out.tx->vout[out.i].scriptPubKey; // the inputs PubKey
+
+	CTxDestination address1;
+    ExtractDestination(pubScript, address1);
+    CBitcoinAddress address2(address1);
+
+    CKeyID keyID;
+    if (!address2.GetKeyID(keyID)) {
+        LogPrintf("CActiveMasternode::GetMasterNodeVin - Address does not refer to a key\n");
         return false;
     }
 
-    if (!Checkpoints::ValidateSyncCheckpoint(hashCheckpoint))
+    if (!pwalletMain->GetKey(keyID, secretKey)) {
+        LogPrintf ("CActiveMasternode::GetMasterNodeVin - Private key for address is not known\n");
         return false;
+    }
 
-    CTxDB txdb;
-    CBlockIndex* pindexCheckpoint = mapBlockIndex[hashCheckpoint];
-    if (!pindexCheckpoint->IsInMainChain())
+    pubkey = secretKey.GetPubKey();
+    return true;
+}
+
+// get all possible outputs for running masternode
+vector<COutput> CActiveMasternode::SelectCoinsMasternode()
+{
+    vector<COutput> vCoins;
+    vector<COutput> filteredCoins;
+
+    // Retrieve all possible outputs
+    pwalletMain->AvailableCoinsMN(vCoins);
+
+    // Filter
+    BOOST_FOREACH(const COutput& out, vCoins)
     {
-        // checkpoint chain received but not yet main chain
-        CBlock block;
-        if (!block.ReadFromDisk(pindexCheckpoint))
-            return error("ProcessSyncCheckpoint: ReadFromDisk failed for sync checkpoint %s", hashCheckpoint.ToString());
-        if (!block.SetBestChain(txdb, pindexCheckpoint))
-        {
-            Checkpoints::hashInvalidCheckpoint = hashCheckpoint;
-            return error("ProcessSyncCheckpoint: SetBestChain failed for sync checkpoint %s", hashCheckpoint.ToString());
+        if(out.tx->vout[out.i].nValue == GetMNCollateral(pindexBest->nHeight)*COIN) { //exactly
+        	filteredCoins.push_back(out);
         }
     }
+    return filteredCoins;
+}
 
-    if (!Checkpoints::WriteSyncCheckpoint(hashCheckpoint))
-        return error("ProcessSyncCheckpoint(): failed to write sync checkpoint %s", hashCheckpoint.ToString());
-    Checkpoints::checkpointMessage = *this;
-    Checkpoints::hashPendingCheckpoint = 0;
-    Checkpoints::checkpointMessagePending.SetNull();
-    LogPrintf("ProcessSyncCheckpoint: sync-checkpoint at %s\n", hashCheckpoint.ToString());
+// get all possible outputs for running masternode for a specific pubkey
+vector<COutput> CActiveMasternode::SelectCoinsMasternodeForPubKey(std::string collateralAddress)
+{
+    CBitcoinAddress address(collateralAddress);
+    CScript scriptPubKey;
+    scriptPubKey.SetDestination(address.Get());
+    vector<COutput> vCoins;
+    vector<COutput> filteredCoins;
+
+    // Retrieve all possible outputs
+    pwalletMain->AvailableCoins(vCoins);
+
+    // Filter
+    BOOST_FOREACH(const COutput& out, vCoins)
+    {
+        if(out.tx->vout[out.i].scriptPubKey == scriptPubKey && out.tx->vout[out.i].nValue == GetMNCollateral(pindexBest->nHeight)*COIN) { //exactly
+        	filteredCoins.push_back(out);
+        }
+    }
+    return filteredCoins;
+}
+
+// when starting a masternode, this can enable to run as a hot wallet with no funds
+bool CActiveMasternode::EnableHotColdMasterNode(CTxIn& newVin, CService& newService)
+{
+    if(!fMasterNode) return false;
+
+    status = MASTERNODE_REMOTELY_ENABLED;
+
+    //The values below are needed for signing dseep messages going forward
+    this->vin = newVin;
+    this->service = newService;
+
+    LogPrintf("CActiveMasternode::EnableHotColdMasterNode() - Enabled! You may shut down the cold daemon.\n");
+
     return true;
 }
