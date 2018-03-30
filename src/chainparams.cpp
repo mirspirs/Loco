@@ -79,11 +79,11 @@ public:
         assert(genesis.hashMerkleRoot == uint256("0x381fcf23c50c4f60d34f351eb4a3adc3ec980333b9e458b7a730494f7d97fecd"));
 
         
-        base58Prefixes[PUBKEY_ADDRESS] = list_of(12);
-        base58Prefixes[SCRIPT_ADDRESS] = list_of(24);
-        base58Prefixes[SECRET_KEY] =     list_of(140);
-        base58Prefixes[EXT_PUBLIC_KEY] = list_of(0x04)(0xd5)(0x92)(0x6c);
-        base58Prefixes[EXT_SECRET_KEY] = list_of(0x04)(0xd5)(0x91)(0xfa);
+        base58Prefixes[PUBKEY_ADDRESS] = {12};
+        base58Prefixes[SCRIPT_ADDRESS] = {24};
+        base58Prefixes[SECRET_KEY] =     {140};
+        base58Prefixes[EXT_PUBLIC_KEY] = {0x04,0xd5,0x92,0x6c};
+        base58Prefixes[EXT_SECRET_KEY] = {0x04,0xd5,0x91,0xfa};
 
         convertSeed6(vFixedSeeds, pnSeed6_main, ARRAYLEN(pnSeed6_main));
 
@@ -132,11 +132,11 @@ public:
         vFixedSeeds.clear();
         vSeeds.clear();
 
-        base58Prefixes[PUBKEY_ADDRESS] = list_of(30);
-        base58Prefixes[SCRIPT_ADDRESS] = list_of(60);
-        base58Prefixes[SECRET_KEY]     = list_of(154);
-        base58Prefixes[EXT_PUBLIC_KEY] = list_of(0xb3)(0x77)(0x9a)(0xBC);
-        base58Prefixes[EXT_SECRET_KEY] = list_of(0xb3)(0x77)(0x5d)(0xDA);
+        base58Prefixes[PUBKEY_ADDRESS] = {30};
+        base58Prefixes[SCRIPT_ADDRESS] = {60};
+        base58Prefixes[SECRET_KEY]     = {154};
+        base58Prefixes[EXT_PUBLIC_KEY] = {0xb3,0x77,0x9a,0xBC};
+        base58Prefixes[EXT_SECRET_KEY] = {0xb3,0x77,0x5d,0xDA};
 
 
         convertSeed6(vFixedSeeds, pnSeed6_test, ARRAYLEN(pnSeed6_test));
