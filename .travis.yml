@@ -1,6 +1,7 @@
-sudo: true
-os:
-  - linux
+sudo: required
+dist: trusty
+os: linux
+language: generic
 before_install:
   - sudo add-apt-repository --yes ppa:ubuntu-sdk-team/ppa
   - sudo add-apt-repository -y ppa:boost-latest/ppa
@@ -19,5 +20,5 @@ before_install:
   - sudo make install
   - cd ../..
 script: 
-  - cd src
-  - sudo make -f makefile.unix
+  - qmake
+  - make 
